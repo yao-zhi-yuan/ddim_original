@@ -55,6 +55,7 @@ optim:
   beta1: 0.9
   warmup_steps: 1000   # ！！！预热步数 (例如 1k 或 2k)
   min_lr: 1e-6         # ！！！（可选）最小学习率
+  total_steps: 270000   # <--- 在这里添加这一行
 
 sampling:
   batch_size: 8
