@@ -1,0 +1,79 @@
+# ==============================================================
+# MPOS (CFP → FFA) Conditional Diffusion Model Configuration
+# Tested on PyTorch 1.6.0 + CUDA 10.2 (compatible with CUDA 12.9 driver)
+# ==============================================================
+# 第一遍配置：ch=96, attn_resolutions:[16], lr=3e-5, batch=4, grad_clip=1.0,
+# 保险配置（新跑）：ch=96, attn_resolutions:[16], lr=3e-5, batch=6, grad_clip=1.0, AMP+累积。等稳了再升 lr=5e-5/1e-4。
+# 2025-10-16  ch=96, attn_resolutions:[32], lr=1e-4, batch=4, grad_clip=1.0,accum_steps: 2 # 累积2步 => 有效batch=4*2=8 , amp: true # 开启 AMP（默认就是 true）
+data:
+  dataset: MPOS
+  data_root: "/home/yzy/ddim/exp/mpos"  # ← 修改为你的数据路径
+  image_size: 256                       # 先训练 256x256，之后可改 512
+  channels: 1                           # FFA灰度(1通道)；若彩色改为3
+  num_workers: 4
+  random_flip: false                    # 医学图像建议不翻转
+  rescaled: true                        # 使用 data_transform 做 [-1,1] 归一化
+  gaussian_dequantization: false
+  uniform_dequantization: false
+
+model:
+  type: simple_cond
+  in_channels: 4
+  out_ch: 1
+  ch: 96                    # ✅ 先降宽度，数值更稳
+  ch_mult: [1, 2, 4, 4]
+  num_res_blocks: 2
+  attn_resolutions: []      # ✅ 暂时关闭注意力（softmax 更容易数值爆）
+  dropout: 0.0
+  resamp_with_conv: true
+  var_type: fixedsmall
+  ema: true
+  ema_rate: 0.9999
+
+diffusion:
+  beta_schedule: linear
+  beta_start: 0.0001
+  beta_end: 0.02
+  num_diffusion_timesteps: 1000
+
+training:
+  batch_size: 4             # ✅ 先小 batch（如果显存够再升）
+  accum_steps: 2       # 累积2步 => 有效batch=4*2=8
+  amp: true         # 开启 AMP（默认就是 true）
+  n_epochs: 15000
+  snapshot_freq: 2000
+  validation_freq: 2000
+  log_interval: 100
+  grad_clip: 1.0            # ✅ 确保有这个
+
+optim:
+  optimizer: Adam
+  lr: 1e-4            # ✅ 先保守
+  weight_decay: 0.0
+  amsgrad: false
+  eps: 1e-8
+  beta1: 0.9
+  warmup_steps: 1000   # ！！！预热步数 (例如 1k 或 2k)
+  min_lr: 1e-6         # ！！！（可选）最小学习率
+
+sampling:
+  batch_size: 8
+  sample_type: generalized              # 使用 DDIM 采样
+  timesteps: 50                         # DDIM步数，20~50效果好
+  eta: 0.0                              # DDIM无随机性
+  paired: true                          # 给定CFP采样生成FFA
+
+logging:
+  use_tensorboard: true
+  log_interval: 100
+  save_dir: ./logs/mpos
+
+# ==============================================================
+# 训练命令示例：
+#   python main.py --config configs/mpos.yml --exp ./exp/mpos256 --doc mpos256 --ni
+# 采样命令示例：
+#   python main.py --config configs/mpos.yml --exp ./exp/mpos256 \
+#       --doc mpos256 --image_folder ./samples_mpos256 \
+#       --sample  --sample_type generalized --timesteps 50 --eta 0.0 --ni
+# ==============================================================
+
