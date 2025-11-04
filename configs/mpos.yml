@@ -7,7 +7,7 @@
 # 2025-10-16  ch=96, attn_resolutions:[32], lr=1e-4, batch=4, grad_clip=1.0,accum_steps: 2 # 累积2步 => 有效batch=4*2=8 , amp: true # 开启 AMP（默认就是 true）
 data:
   dataset: MPOS
-  data_root: "/home/yzy/ddim/exp/mpos"  # ← 修改为你的数据路径
+  data_root: "./exp/mpos"  # ← 修改为你的数据路径
   image_size: 256                       # 先训练 256x256，之后可改 512
   channels: 1                           # FFA灰度(1通道)；若彩色改为3
   num_workers: 4
